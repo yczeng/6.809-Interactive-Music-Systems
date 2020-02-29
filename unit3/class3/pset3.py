@@ -307,8 +307,8 @@ class Vegetable(InstructionGroup):
         self.timbre = timbre
         self.decay = decay
 
-        items = ["broccoli", "carrot", "tomato", "pizza", "greenbeans"]
-        self.item_pitches = {"broccoli":70, "carrot":76, "tomato":74, "pizza":72, "greenbeans":70}
+        items = ["broccoli", "carrot", "tomato", "greenbeans"]
+        self.item_pitches = {"broccoli":60, "carrot":58, "tomato":56, "pizza":54, "greenbeans":52}
 
         self.selected_item = np.random.choice(items)
 
@@ -316,13 +316,11 @@ class Vegetable(InstructionGroup):
         self.item = Rectangle(pos=pos, size=(10*r, 10*r), source ="broccoli.png")
 
         if self.selected_item == "broccoli":
-            self.broccoli = self.item
+            pass
         elif self.selected_item == "carrot":
             self.item = Rectangle(pos=pos, size=(10*r, 10*r), source ="carrot.png")
         elif self.selected_item == "tomato":
             self.item = Rectangle(pos=pos, size=(10*r, 10*r), source ="tomato.png")
-        elif self.selected_item == "pizza":
-            self.item = Rectangle(pos=pos, size=(10*r, 10*r), source ="pizza.png")
         elif self.selected_item == "greenbeans":
             self.item = Rectangle(pos=pos, size=(10*r, 10*r), source ="greenbeans.png")
 
@@ -348,6 +346,76 @@ class Vegetable(InstructionGroup):
         # continue flag
         return self.radius_anim.is_active(self.time)
 
+
+class JunkFood(InstructionGroup):
+    def __init__(self, pos, r, color, bounce_callback=None):
+        super(JunkFood, self).__init__()
+
+        self.radius = r
+        self.pos = np.array(pos, dtype=np.float)
+        self.vel = np.array((randint(-300, 300), 0), dtype=np.float)
+        self.bounce_callback = bounce_callback
+
+        items = ["cake", "hotcheetos"]
+        self.item_pitches = {"cake":70, "hotcheetos": 76}
+
+        self.selected_item = np.random.choice(items)
+
+        # default
+        self.item = Rectangle(pos=pos, size=(2*r, 2*r), source ="cake.png")
+
+        if self.selected_item == "cake":
+            pass
+        if self.selected_item == "hotcheetos":
+            self.item = Rectangle(pos=pos, size=(2*r, 2*r), source ="hotcheetos.png")
+
+        self.add(self.item)
+        self.num_bounces = 0
+        self.exist_flag = True
+        self.hit = False
+        self.on_update(0)
+
+    def on_update(self, dt):
+        # integrate accel to get vel
+        self.vel += gravity * dt
+
+        # integrate vel to get pos
+        self.pos += self.vel * dt
+
+        if self.num_bounces < 5:
+            # collision with right side
+            if self.pos[0] - self.radius < 0:
+                self.vel[0] = -self.vel[0] * damping
+                self.pos[0] = self.radius
+                self.num_bounces += 1
+                self.hit = True
+
+            # collision with left side
+            elif self.pos[0] + self.radius > Window.width:
+                self.vel[0] = -self.vel[0] * damping
+                self.pos[0] = Window.width - self.radius
+                self.num_bounces += 1
+                self.hit = True
+
+            # collision with floor
+            elif self.pos[1] - self.radius < 0:
+                self.vel[1] = -self.vel[1] * damping
+                self.pos[1] = self.radius
+                self.num_bounces += 1
+                self.hit = True
+        else:
+            # makes sure dot doesn't dissapear before finishing slide off screen
+            if (self.pos[0] - self.radius < 0 - 4*self.radius) or (self.pos[0] + self.radius >  Window.width + 4*self.radius) or (self.pos[1] - self.radius < 0 - 4*self.radius):
+                self.exist_flag = False
+
+        # send data to listener as well
+        if self.bounce_callback:
+            self.bounce_callback(self, self.vel)
+
+        self.item.pos = self.pos
+        return self.exist_flag
+
+
 # part 3
 class MainWidget3(BaseWidget) :
     def __init__(self):
@@ -364,14 +432,10 @@ class MainWidget3(BaseWidget) :
         self.gain = 0.5
         self.attack = 0.01
         self.decay = 1.0
-        self.timbre = 'sine'
 
         #adds background of nicholas cage
         self.square = Rectangle(pos=(0,0), size=(Window.width, Window.height), source ="nick-background.png")
         self.canvas.add(self.square)
-
-        self.info = topleft_label()
-        self.add_widget(self.info)
 
         self.anim_group = AnimGroup()
         self.canvas.add(self.anim_group)
@@ -384,24 +448,41 @@ class MainWidget3(BaseWidget) :
 
     def on_touch_down(self, touch) :
         # 60 is the radius
-        veggie = Vegetable(touch.pos, 60, (0,0), self.timbre, self.decay)
 
-        pitch = veggie.item_pitches[veggie.selected_item]
-        note = NoteGenerator(pitch, 0.3, self.timbre)
-        env = Envelope(note, self.attack, 1, self.decay, 2)
-        self.mixer.add(env)
+        veggie_or_junk = randint(1,101)
+        if veggie_or_junk > 20:
+            veggie = Vegetable(touch.pos, 60, (0,0), "square", self.decay)
 
-        self.canvas.add(veggie)
+            pitch = veggie.item_pitches[veggie.selected_item]
+            note = NoteGenerator(pitch, 0.3, "square")
+            env = Envelope(note, self.attack, 1, self.decay, 2)
+            self.mixer.add(env)
 
-        self.anim_group.add(veggie)
+            self.canvas.add(veggie)
+
+            self.anim_group.add(veggie)
+        else:
+            r = 50
+            c = (1,1,1)
+
+            junk_food = JunkFood(touch.pos, r, c, self.junk_collide)
+            self.canvas.add(junk_food)
+            self.anim_group.add(junk_food)
+
+    def junk_collide(self, bubble, vel) :
+        #high range
+        high_intervals = [i for i in range(20, 30)]
+
+        if bubble.hit:
+            pitch = np.random.choice(high_intervals) + self.root_pitch
+            note = NoteGenerator(pitch, 0.3, "sine")
+            env = Envelope(note, self.attack, 1, self.decay, 2)
+            self.mixer.add(env)
+            bubble.hit = False
 
     def on_update(self):
         self.audio.on_update()
         self.anim_group.on_update()
-
-        self.info.text = 'load: %.2f\n' % self.audio.get_cpu_load()
-        self.info.text += 'dur: %.2f\n' % self.decay
-        self.info.text += 'timbre: %s\n' % self.timbre
 
         # makes sure background resizes when window does
         # self.square = Rectangle(pos=(0,0), size=(Window.width, Window.height), source ="nick-background.png")
