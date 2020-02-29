@@ -208,6 +208,10 @@ class PhysBubble(InstructionGroup):
         self.circle = CEllipse(cpos=pos, csize=(2*r,2*r), segments = 40)
         self.add(self.circle)
 
+        self.num_bounces = 0
+
+        self.exist_flag = True
+
         self.on_update(0)
 
     def on_update(self, dt):
@@ -217,25 +221,31 @@ class PhysBubble(InstructionGroup):
         # integrate vel to get pos
         self.pos += self.vel * dt
 
-        # collide with sides
-        if self.pos[0] - self.radius < 0:
-            self.vel[0] = -self.vel[0] * damping
-            self.pos[0] = self.radius
-        elif self.pos[0] + self.radius > 800:
-            self.vel[0] = -self.vel[0] * damping
-            self.pos[0] = 800 - self.radius
+        if self.num_bounces < 5:
+            # collision with right side
+            if self.pos[0] - self.radius < 0:
+                self.vel[0] = -self.vel[0] * damping
+                self.pos[0] = self.radius
+                self.num_bounces += 1
 
-        # and fall off screen after a certain number of bounces
-        # TODO: call callback when bounce happens.
+            # collision with left side
+            elif self.pos[0] + self.radius > 800:
+                self.vel[0] = -self.vel[0] * damping
+                self.pos[0] = 800 - self.radius
+                self.num_bounces += 1
 
-        # collision with floor
-        if self.pos[1] - self.radius < 0:
-            self.vel[1] = -self.vel[1] * damping
-            self.pos[1] = self.radius
+            # collision with floor
+            elif self.pos[1] - self.radius < 0:
+                self.vel[1] = -self.vel[1] * damping
+                self.pos[1] = self.radius
+                self.num_bounces += 1
+        else:
+            # makes sure dot doesn't dissapear before finishing slide off screen
+            if (self.pos[0] - self.radius < 0 - 2*self.radius) or (self.pos[0] + self.radius > 800 + 2*self.radius) or (self.pos[1] - self.radius < 0 - 2*self.radius):
+                self.exist_flag = False
 
         self.circle.cpos = self.pos
-
-        return True
+        return self.exist_flag
 
 
 # part 3
