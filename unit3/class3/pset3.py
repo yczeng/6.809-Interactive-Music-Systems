@@ -160,7 +160,7 @@ class MainWidget1(BaseWidget) :
 
 # part 2
 class MainWidget2(BaseWidget) :
-    def __init__(self):
+    def __init__(self, ):
         super(MainWidget2, self).__init__()
         self.info = topleft_label()
         self.add_widget(self.info)
@@ -169,6 +169,18 @@ class MainWidget2(BaseWidget) :
         self.objects = AnimGroup()
         self.canvas.add(self.objects)
 
+        self.audio = Audio(2)
+        self.mixer = Mixer()
+        self.mixer.set_gain(0.2)
+        self.audio.set_generator(self.mixer)
+
+        # note parameters
+        self.root_pitch = 60
+        self.gain = 0.5
+        self.attack = 0.01
+        self.decay = 1.0
+        self.timbre = 'sine'
+
     def on_touch_down(self, touch) :
         # TODO - vary these parameters as needed or create new parameters if you wish.
         p = touch.pos
@@ -176,14 +188,36 @@ class MainWidget2(BaseWidget) :
         c = (1,1,1)
 
         # TODO: pass in callback
-        self.objects.add(PhysBubble(p, r, c))
+        self.objects.add(PhysBubble(p, r, c, self.on_collide))
 
     def on_collide(self, bubble, vel) :
         # TODO make some music here. You can access member variables / state
-        # of bubble for the music to depend on something about the bubble itself.
-        pass
+
+        # pitch = lookup(keycode[1], '12345678' , (0, 2, 4, 5, 7, 9, 11, 12))
+
+        # interval_list = [0, 2, 4, 5, 7, 9, 11, 12]
+        # mapped_colors = [get_random_color(alpha=1.0) for i in range(8)]
+        # self.color_list = dict( zip( interval_list, mapped_colors))
+
+        if bubble.hit:
+            print("IT JUST HIT", bubble.pos)
+
+            pitch = 4
+            pitch += self.root_pitch
+            note = NoteGenerator(pitch, 0.3, self.timbre)
+            env = Envelope(note, self.attack, 1, self.decay, 2)
+            self.mixer.add(env)
+
+            bubble.hit = False
+
+        # if pitch is not None:
+        #     pitch += self.root_pitch
+        #     note = NoteGenerator(pitch, 0.3, self.timbre)
+        #     env = Envelope(note, self.attack, 1, self.decay, 2)
+        #     self.mixer.add(env)
 
     def on_update(self):
+        self.audio.on_update()
         self.objects.on_update()
 
         self.info.text = str(Window.mouse_pos)
@@ -195,12 +229,13 @@ gravity = np.array((0, -1800))
 damping = 0.9
 
 class PhysBubble(InstructionGroup):
-    def __init__(self, pos, r, color):
+    def __init__(self, pos, r, color, bounce_callback=None):
         super(PhysBubble, self).__init__()
 
         self.radius = r
         self.pos = np.array(pos, dtype=np.float)
         self.vel = np.array((randint(-300, 300), 0), dtype=np.float)
+        self.bounce_callback = bounce_callback
 
         self.color = Color(*color)
         self.add(self.color)
@@ -211,6 +246,8 @@ class PhysBubble(InstructionGroup):
         self.num_bounces = 0
 
         self.exist_flag = True
+
+        self.hit = False
 
         self.on_update(0)
 
@@ -227,22 +264,29 @@ class PhysBubble(InstructionGroup):
                 self.vel[0] = -self.vel[0] * damping
                 self.pos[0] = self.radius
                 self.num_bounces += 1
+                self.hit = True
 
             # collision with left side
             elif self.pos[0] + self.radius > 800:
                 self.vel[0] = -self.vel[0] * damping
                 self.pos[0] = 800 - self.radius
                 self.num_bounces += 1
+                self.hit = True
 
             # collision with floor
             elif self.pos[1] - self.radius < 0:
                 self.vel[1] = -self.vel[1] * damping
                 self.pos[1] = self.radius
                 self.num_bounces += 1
+                self.hit = True
         else:
             # makes sure dot doesn't dissapear before finishing slide off screen
             if (self.pos[0] - self.radius < 0 - 2*self.radius) or (self.pos[0] + self.radius > 800 + 2*self.radius) or (self.pos[1] - self.radius < 0 - 2*self.radius):
                 self.exist_flag = False
+
+        # send data to listener as well
+        if self.bounce_callback:
+            self.bounce_callback(self, self.vel)
 
         self.circle.cpos = self.pos
         return self.exist_flag
