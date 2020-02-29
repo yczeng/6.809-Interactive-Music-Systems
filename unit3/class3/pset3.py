@@ -21,6 +21,7 @@ from kivy.graphics import PushMatrix, PopMatrix, Translate, Scale, Rotate
 
 from kivy.utils import get_random_color
 
+import random
 from random import randint, random
 import numpy as np
 
@@ -179,7 +180,7 @@ class MainWidget2(BaseWidget) :
         self.gain = 0.5
         self.attack = 0.01
         self.decay = 1.0
-        self.timbre = 'sine'
+        self.timbre = np.random.choice(['sine', 'square', 'triangle', 'sawtooth'])
 
     def on_touch_down(self, touch) :
         # TODO - vary these parameters as needed or create new parameters if you wish.
@@ -193,28 +194,23 @@ class MainWidget2(BaseWidget) :
     def on_collide(self, bubble, vel) :
         # TODO make some music here. You can access member variables / state
 
-        # pitch = lookup(keycode[1], '12345678' , (0, 2, 4, 5, 7, 9, 11, 12))
+        #high range
+        high_intervals = [i for i in range(0, 30)]
 
-        # interval_list = [0, 2, 4, 5, 7, 9, 11, 12]
-        # mapped_colors = [get_random_color(alpha=1.0) for i in range(8)]
-        # self.color_list = dict( zip( interval_list, mapped_colors))
+        #low range
+        low_intervals = [i for i in range(-30, 0)]
+
+        if abs(vel[0])>80 or abs(vel[1])>80:
+            intervals = high_intervals
+        else:
+            intervals = low_intervals
 
         if bubble.hit:
-            print("IT JUST HIT", bubble.pos)
-
-            pitch = 4
-            pitch += self.root_pitch
+            pitch = np.random.choice(low_intervals) + self.root_pitch
             note = NoteGenerator(pitch, 0.3, self.timbre)
             env = Envelope(note, self.attack, 1, self.decay, 2)
             self.mixer.add(env)
-
             bubble.hit = False
-
-        # if pitch is not None:
-        #     pitch += self.root_pitch
-        #     note = NoteGenerator(pitch, 0.3, self.timbre)
-        #     env = Envelope(note, self.attack, 1, self.decay, 2)
-        #     self.mixer.add(env)
 
     def on_update(self):
         self.audio.on_update()
@@ -267,9 +263,9 @@ class PhysBubble(InstructionGroup):
                 self.hit = True
 
             # collision with left side
-            elif self.pos[0] + self.radius > 800:
+            elif self.pos[0] + self.radius > Window.width:
                 self.vel[0] = -self.vel[0] * damping
-                self.pos[0] = 800 - self.radius
+                self.pos[0] = Window.width - self.radius
                 self.num_bounces += 1
                 self.hit = True
 
@@ -281,7 +277,7 @@ class PhysBubble(InstructionGroup):
                 self.hit = True
         else:
             # makes sure dot doesn't dissapear before finishing slide off screen
-            if (self.pos[0] - self.radius < 0 - 2*self.radius) or (self.pos[0] + self.radius > 800 + 2*self.radius) or (self.pos[1] - self.radius < 0 - 2*self.radius):
+            if (self.pos[0] - self.radius < 0 - 2*self.radius) or (self.pos[0] + self.radius >  Window.width + 2*self.radius) or (self.pos[1] - self.radius < 0 - 2*self.radius):
                 self.exist_flag = False
 
         # send data to listener as well
