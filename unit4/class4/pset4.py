@@ -23,11 +23,11 @@ class Arpeggiator(object):
         self.synth = synth
         self.channel = channel
         self.program = program
+        self.loop = False
 
         self.playing = False
 
         self.cmd = None
-        self.idx = 0
 
         self.pitches = []
         self.notes = self.pitches
@@ -48,7 +48,7 @@ class Arpeggiator(object):
         self.synth.program(self.channel, self.program[0], self.program[1])
 
         # start from the beginning
-        self.idx = 0
+        self.index = 0
 
         # post the first note on the next quarter-note:
         now = self.sched.get_tick()
@@ -88,30 +88,34 @@ class Arpeggiator(object):
 
 
     def _noteon(self, tick):
+        if (self.loop and self.index) >= len(self.notes):
+            self.index = 0
+
         if self.index < len(self.notes):
             pitch = self.notes[self.index]
-            self.note_len = 100
+            # pitch = 60 + self.pitches[self.scale_idx]
+            vel = 100
+            self.synth.noteon(self.channel, pitch, vel)
 
+            # post the note off (full duration, legato):
+            off_tick = tick + self.length
+            self.sched.post_at_tick(self._noteoff, off_tick, pitch)
+
+            # schedule the next noteon for next rhythmic subdivision:
+            next_beat = tick + self.length
+            self.cmd = self.sched.post_at_tick(self._noteon, next_beat)
         else:
-            return
+            self.playing = False
+            self.index = 0
 
-        # pitch = 60 + self.pitches[self.scale_idx]
-        vel = 100
-        self.synth.noteon(self.channel, pitch, vel)
-        
+
+
         self.index += 1
-
-        # post the note off (full duration, legato):
-        off_tick = tick + self.note_len
-        self.sched.post_at_tick(self._noteoff, off_tick, pitch)
-
-        # schedule the next noteon for next rhythmic subdivision:
-        next_beat = tick + self.note_len
-        self.cmd = self.sched.post_at_tick(self._noteon, next_beat)
 
     def _noteoff(self, tick, pitch):
         # terminate current note:
         self.synth.noteoff(self.channel, pitch)
+        # self.index = 0
 
     # def toggle(self):
     #     if not self.playing:
