@@ -67,9 +67,9 @@ class Arpeggiator(object):
 
     # pitches is a list of MIDI pitch values. For example [60 64 67 72]
     def set_pitches(self, pitches):
-        print("self pitches updated? Why not working")
         self.pitches = pitches
-        print("self.pitches")
+        self.notes = pitches
+        print("self.pitches", pitches)
 
     # length is related to speed of the notes. For example 240 represents 1/8th notes.
     # articulation is a ratio that defines how quickly the note off should follow the note on. 
@@ -79,21 +79,21 @@ class Arpeggiator(object):
     def set_rhythm(self, length, articulation):
         #total length is the speed times articulation?
         self.length = length * articulation
+        print("self.length", self.length)
 
     # dir is either 'up', 'down', or 'updown'
     def set_direction(self, direction):
-        pass 
+        self.direction = direction
+        print("self.direction", self.direction) 
 
 
     def _noteon(self, tick):
         if self.index < len(self.notes):
-            self.scale_idx = self.notes[self.index][1]
-            self.note_len = self.notes[self.index][0]
+            pitch = self.notes[self.index]
+            self.note_len = 100
 
         else:
             return
-
-        pitch = self.scale_idx
 
         # pitch = 60 + self.pitches[self.scale_idx]
         vel = 100
@@ -109,27 +109,27 @@ class Arpeggiator(object):
         next_beat = tick + self.note_len
         self.cmd = self.sched.post_at_tick(self._noteon, next_beat)
 
-    def _note_off(self, tick, pitch):
+    def _noteoff(self, tick, pitch):
         # terminate current note:
         self.synth.noteoff(self.channel, pitch)
 
-    def toggle(self):
-        if not self.playing:
+    # def toggle(self):
+    #     if not self.playing:
 
-            # set up the correct sound (program: bank and preset)
-            self.synth.program(self.channel, self.program[0], self.program[1])
+    #         # set up the correct sound (program: bank and preset)
+    #         self.synth.program(self.channel, self.program[0], self.program[1])
 
-            # find the tick of the next beat, and make it "beat aligned"
-            now = self.sched.get_tick()
-            next_beat = quantize_tick_up(now, 480)
+    #         # find the tick of the next beat, and make it "beat aligned"
+    #         now = self.sched.get_tick()
+    #         next_beat = quantize_tick_up(now, 480)
 
-            # now, post the _noteon function (and remember this command)
-            self.cmd = self.sched.post_at_tick(self._noteon, next_beat)
-        else:
-            self.sched.cancel(self.cmd)
-            self.cmd = None
+    #         # now, post the _noteon function (and remember this command)
+    #         self.cmd = self.sched.post_at_tick(self._noteon, next_beat)
+    #     else:
+    #         self.sched.cancel(self.cmd)
+    #         self.cmd = None
 
-        self.playing = not self.playing
+    #     self.playing = not self.playing
 
 # part 1: test your Arpeggiator here
 class MainWidget1(BaseWidget) :
@@ -166,13 +166,10 @@ class MainWidget1(BaseWidget) :
                 self.arpeg.stop()
             else:
                 self.arpeg.start()
-
-        print("HOWDY")
         pitches = lookup(keycode[1], 'qwe', ((60, 64, 67, 72), (55, 59, 62, 65, 67, 71), (60, 65, 69)))
         if pitches:
             self.arpeg.set_pitches(pitches)
 
-        print("banana")
         rhythm = lookup(keycode[1], 'uiop', ((120, 1), (160, 1), (240, 0.75), (480, 0.25)))
         if rhythm:
             self.arpeg.set_rhythm(*rhythm)
