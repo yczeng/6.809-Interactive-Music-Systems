@@ -11,7 +11,23 @@ from common.clock import Clock, SimpleTempoMap, AudioScheduler, tick_str, kTicks
 from common.metro import Metronome
 from kivy.core.window import Window
 
+from kivy.graphics import Color, Ellipse, Rectangle, Line, Triangle, RoundedRectangle
+from kivy.graphics import PushMatrix, PopMatrix, Translate, Scale, Rotate
+from common.gfxutil import topleft_label, CEllipse, KFAnim, AnimGroup
+
+from kivy.graphics.instructions import InstructionGroup
+
+
+from kivy.app import App
+
+from kivy.utils import get_random_color
+
+import random
+from random import randint, random
 import numpy as np
+
+from kivy.uix.image import Image, AsyncImage
+
 
 # part 1: create Arpeggiator
 class Arpeggiator(object):
@@ -304,11 +320,9 @@ class MainWidget3(BaseWidget) :
         self.length = 180
         self.duration = 0.7
 
-
         self.blackkeys = (41, 43, 46, 48, 50)
         self.whitekeys = (40, 42, 44, 45, 47, 49, 51)
         self.ominous_melody = (40, 42, 43, 48, 47, 47) + (42, 43, 45, 50, 48, 47) + (48, 47, 45, 43, 45, 47, 40, 40) + (42, 45, 42, 47)
-
 
         # the diminished chords never die
         self.arpeg.set_rhythm(self.length, self.duration)
@@ -322,6 +336,20 @@ class MainWidget3(BaseWidget) :
         # this is an evil diminished chord
         self.pitches2 = (24, 24, 24, 24)
         self.arpeg2.set_pitches(self.pitches2)
+
+        # ========================== graphics start here =======================================
+        # adds eyes
+
+        # AnimGroup handles drawing, animation, and object lifetime management
+        self.anim_group = AnimGroup()
+        self.canvas.add(self.anim_group)
+
+        interval_list = [0, 2, 4, 5, 7, 9, 11, 12]
+        mapped_colors = [get_random_color(alpha=1.0) for i in range(8)]
+        self.color_list = dict( zip( interval_list, mapped_colors))
+
+        self.touch_pos = (0,0)
+        self.bubble = None
 
     def on_key_down(self, keycode, modifiers):
         # change pitches with up/down keys
@@ -342,19 +370,28 @@ class MainWidget3(BaseWidget) :
         shift = lookup(keycode[1], ('left', 'right'), (20, -20))
         if shift:
             self.length += shift
-            self.arpeg.set_rhythm(self.length, self.duration)        
-
-    def on_key_up(self, keycode):
-        pass
+            self.arpeg.set_rhythm(self.length, self.duration)
 
     def on_touch_down(self, touch):
+        self.touch_pos = touch.pos
         p = touch.pos
         self.arpeg2.start()
+
+        p = touch.pos
+        r = 50
+        c = (1,1,1)
+
+        self.bubble = ClickBubble(self.touch_pos, 20, (1,1,1), "sine", 1)
+    
+        self.canvas.add(self.bubble)
+
+        self.anim_group.add(self.bubble)
 
     def on_touch_up(self, touch):
         self.arpeg2.stop()
 
     def on_touch_move(self, touch):
+        self.bubble.update_pos(touch.pos)
         p = touch.pos
 
         # update pitches
@@ -365,10 +402,55 @@ class MainWidget3(BaseWidget) :
         # update speed - range
         self.arpeg2.set_rhythm(p[1], 0.7)
 
+
+
     def on_update(self) :
         self.audio.on_update()
         self.label.text = self.sched.now_str() + '\n'
+        self.anim_group.on_update()
 
+gravity = np.array((0, -1800))
+damping = 0.9
+
+
+class ClickBubble(InstructionGroup):
+    def __init__(self, pos, r, color, timbre="sine", decay=1):
+        super(ClickBubble, self).__init__()
+
+        center_x = Window.width/2
+        center_y = Window.height/2
+
+        self.radius_anim = KFAnim((0, r), (1, 4*r), (3, 0))
+        self.pos_anim    = KFAnim((0, pos[0], pos[1]), (3, Window.width, Window.height))
+
+        self.color = Color(*color)
+        self.add(self.color)
+        self.timbre = timbre
+        self.decay = decay
+
+        self.square = Rectangle(pos=pos, size=(2*r, 2*r))
+        self.add(self.square)
+
+        self.time = 0
+        self.on_update(0)
+
+    def update_pos(self, pos):
+        self.square.pos = pos
+
+    def on_update(self, dt):
+        # animate radius
+        rad = self.radius_anim.eval(self.time)
+
+        # changes how much time and how fast object travels based on decay
+        # pos = self.pos_anim.eval(self.time*(1/self.decay))
+
+        # self.square.pos = pos
+        self.square.size = (2*rad, 2*rad)
+
+        # advance time
+        self.time += dt
+        # continue flag
+        return self.radius_anim.is_active(self.time)
 
 
 if __name__ == "__main__":
