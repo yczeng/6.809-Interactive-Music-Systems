@@ -65,7 +65,6 @@ class Arpeggiator(object):
         next_beat = quantize_tick_up(now, self.length)
         self.cmd = self.sched.post_at_tick(self._noteon, next_beat)
 
-    
     # stop the arpeggiator
     def stop(self):
         if not self.playing:
