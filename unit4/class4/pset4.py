@@ -9,6 +9,7 @@ from common.synth import Synth
 from common.gfxutil import topleft_label
 from common.clock import Clock, SimpleTempoMap, AudioScheduler, tick_str, kTicksPerQuarter, quantize_tick_up
 from common.metro import Metronome
+from kivy.core.window import Window
 
 import numpy as np
 
@@ -214,7 +215,10 @@ class MainWidget2(BaseWidget) :
         self.add_widget(self.label)
 
         # set pitches and lengths
-        self.arpeg.set_pitches((55, 59, 62, 65, 67, 71))
+
+        # this is an evil diminished chord
+        self.pitches = (48, 51, 54, 57)
+        self.arpeg.set_pitches(self.pitches)
 
     def on_touch_down(self, touch):
         p = touch.pos
@@ -225,6 +229,14 @@ class MainWidget2(BaseWidget) :
 
     def on_touch_move(self, touch):
         p = touch.pos
+
+        # update pitches
+        scaling = (touch.pos[0] - Window.width/2) / 50
+        new_pitches = tuple([int(scaling+i) for i in self.pitches])
+        self.arpeg.set_pitches(new_pitches)
+
+        # update speed - range
+        self.arpeg.set_rhythm(p[1], 0.7)
 
     def on_update(self) :
         self.audio.on_update()
