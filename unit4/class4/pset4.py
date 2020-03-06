@@ -32,7 +32,7 @@ class Arpeggiator(object):
 
         self.pitches = []
         self.notes = []
-        self.length = 480
+        self.length = 100
         self.articulation = 1
         self.direction = "up"
 
@@ -106,8 +106,7 @@ class Arpeggiator(object):
 
         if self.index < len(self.notes):
             pitch = self.notes[self.index]
-            vel = 100
-            self.synth.noteon(self.channel, pitch, vel)
+            self.synth.noteon(self.channel, pitch, 100)
 
             # post the note off (full duration, legato):
             off_tick = tick + self.length
@@ -119,8 +118,6 @@ class Arpeggiator(object):
         else:
             self.playing = False
             self.index = 0
-
-
 
         self.index += 1
 
@@ -138,7 +135,7 @@ class MainWidget1(BaseWidget) :
         self.synth = Synth('../data/FluidR3_GM.sf2')
 
         # create TempoMap, AudioScheduler
-        self.tempo_map  = SimpleTempoMap(120)
+        self.tempo_map  = SimpleTempoMap(int(self.length))
         self.sched = AudioScheduler(self.tempo_map)
 
         # connect scheduler into audio system
@@ -220,6 +217,10 @@ class MainWidget2(BaseWidget) :
         self.pitches = (48, 51, 54, 57)
         self.arpeg.set_pitches(self.pitches)
 
+    def on_key_down(self, keycode, modifiers):
+        if keycode[1] == 'm':
+            self.metro.toggle()
+
     def on_touch_down(self, touch):
         p = touch.pos
         self.arpeg.start()
@@ -263,8 +264,35 @@ class MainWidget3(BaseWidget) :
         self.label = topleft_label()
         self.add_widget(self.label)
 
+        # create the metronome:
+        self.metro = Metronome(self.sched, self.synth)
+
+        # create the arpeggiator:
+        self.arpeg = Arpeggiator(self.sched, self.synth, channel = 1, program = (0,0), loop=True)
+
+        # set pitches and lengths
+        # this is an evil diminished chord
+        self.pitches = (48, 51, 54, 57)
+        self.arpeg.set_pitches(self.pitches)
+
+        self.length = 180
+        self.duration = 0.7
+
+        # the diminished chords never die
+        self.arpeg.start()
+
     def on_key_down(self, keycode, modifiers):
-        pass
+        # change pitches with up/down keys
+        pitch_change = lookup(keycode[1], ('up', 'down'), (1, -1))
+        if pitch_change:
+            self.pitches = tuple([i + pitch_change for i in self.pitches])
+            self.arpeg.set_pitches(self.pitches)
+
+        # change note length with left/right keys
+        shift = lookup(keycode[1], ('left', 'right'), (20, -20))
+        if shift:
+            self.length += shift
+            self.arpeg.set_rhythm(self.length, self.duration)        
 
     def on_key_up(self, keycode):
         pass
