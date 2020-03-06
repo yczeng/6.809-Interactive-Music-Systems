@@ -28,6 +28,8 @@ import numpy as np
 
 from kivy.uix.image import Image, AsyncImage
 
+from kivy.clock import Clock as kivyClock
+
 
 # part 1: create Arpeggiator
 class Arpeggiator(object):
@@ -350,6 +352,7 @@ class MainWidget3(BaseWidget) :
 
         self.touch_pos = (0,0)
         self.bubble = None
+        self.objects = []
 
     def on_key_down(self, keycode, modifiers):
         # change pitches with up/down keys
@@ -384,8 +387,8 @@ class MainWidget3(BaseWidget) :
         self.bubble = ClickBubble(self.touch_pos, 20, (1,1,1), "sine", 1)
     
         self.canvas.add(self.bubble)
-
         self.anim_group.add(self.bubble)
+        self.objects.append(self.bubble)
 
     def on_touch_up(self, touch):
         self.arpeg2.stop()
@@ -409,6 +412,13 @@ class MainWidget3(BaseWidget) :
         self.label.text = self.sched.now_str() + '\n'
         self.anim_group.on_update()
 
+        dt = kivyClock.frametime
+        kill_list = [b for b in self.objects if b.on_update(dt) == False]
+        for b in kill_list:
+            self.objects.remove(b)
+            self.canvas.remove(b)
+
+
 gravity = np.array((0, -1800))
 damping = 0.9
 
@@ -420,7 +430,7 @@ class ClickBubble(InstructionGroup):
         center_x = Window.width/2
         center_y = Window.height/2
 
-        self.radius_anim = KFAnim((0, r), (1, 4*r), (3, 0))
+        self.radius_anim = KFAnim((0, r), (1, 4*r), (1, 0))
         self.pos_anim    = KFAnim((0, pos[0], pos[1]), (3, Window.width, Window.height))
 
         self.color = Color(*color)
