@@ -15,7 +15,7 @@ import numpy as np
 
 # part 1: create Arpeggiator
 class Arpeggiator(object):
-    def __init__(self, sched, synth, channel=0, program=(0, 40), callback=None, loop=False):
+    def __init__(self, sched, synth, channel=0, program=(0, 40), callback=None, loop=False, ascend=False):
         super(Arpeggiator, self).__init__()
 
         self.playing = False
@@ -37,6 +37,14 @@ class Arpeggiator(object):
         self.direction = "up"
 
         self.index = 0
+
+        # this is for ascending after ever 8 loops of the chord
+        self.ascend = ascend
+        self.counter = 0
+        self.blackkeys = (41, 43, 46, 48, 50)
+        self.whitekeys = (40, 42, 44, 45, 47, 49, 51)
+
+        self.ascending_count = 0
 
     # start the arpeggiator
     def start(self):
@@ -103,10 +111,27 @@ class Arpeggiator(object):
     def _noteon(self, tick):
         if (self.loop and self.index) >= len(self.notes):
             self.index = 0
+            if self.ascend:
+                self.counter += 1
+
+        if self.ascend and self.counter == 8:
+            self.notes = tuple([i + 1 for i in self.notes])
+            self.counter = 0
+            self.ascending_count += 1
+
+        if self.ascend and self.ascending_count == 8:
+            self.notes = tuple([i - 8 for i in self.notes])
+            self.ascending_count = 0
 
         if self.index < len(self.notes):
             pitch = self.notes[self.index]
-            self.synth.noteon(self.channel, pitch, 100)
+
+            # make the first beat stronger
+            if self.ascend and self.index == 0:
+                volume = 100
+            else:
+                volume = 70
+            self.synth.noteon(self.channel, pitch, volume)
 
             # post the note off (full duration, legato):
             off_tick = tick + self.length
@@ -268,7 +293,7 @@ class MainWidget3(BaseWidget) :
         self.metro = Metronome(self.sched, self.synth)
 
         # create the arpeggiator:
-        self.arpeg = Arpeggiator(self.sched, self.synth, channel = 1, program = (0,0), loop=True)
+        self.arpeg = Arpeggiator(self.sched, self.synth, channel = 1, program = (0,0), loop=True, ascend=True)
 
         # set pitches and lengths
         # this is an evil diminished chord
@@ -279,6 +304,7 @@ class MainWidget3(BaseWidget) :
         self.duration = 0.7
 
         # the diminished chords never die
+        self.arpeg.set_rhythm(self.length, self.duration)
         self.arpeg.start()
 
     def on_key_down(self, keycode, modifiers):
@@ -287,6 +313,14 @@ class MainWidget3(BaseWidget) :
         if pitch_change:
             self.pitches = tuple([i + pitch_change for i in self.pitches])
             self.arpeg.set_pitches(self.pitches)
+
+        whitekeys = lookup(keycode[1], 'asdfghj', tuple(self.arpeg.whitekeys))
+        if whitekeys:
+            self.synth.noteon(0, whitekeys, 100)
+
+        blackkeys = lookup(keycode[1], 'wetyu', tuple(self.arpeg.blackkeys))
+        if blackkeys:
+            self.synth.noteon(0, blackkeys, 100)
 
         # change note length with left/right keys
         shift = lookup(keycode[1], ('left', 'right'), (20, -20))
