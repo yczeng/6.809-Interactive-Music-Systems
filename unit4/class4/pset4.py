@@ -14,7 +14,7 @@ import numpy as np
 
 # part 1: create Arpeggiator
 class Arpeggiator(object):
-    def __init__(self, sched, synth, channel=0, program=(0, 40), callback = None):
+    def __init__(self, sched, synth, channel=0, program=(0, 40), callback=None, loop=False):
         super(Arpeggiator, self).__init__()
 
         self.playing = False
@@ -23,7 +23,7 @@ class Arpeggiator(object):
         self.synth = synth
         self.channel = channel
         self.program = program
-        self.loop = False
+        self.loop = loop
 
         self.playing = False
 
@@ -33,7 +33,7 @@ class Arpeggiator(object):
         self.notes = []
         self.length = 480
         self.articulation = 1
-        self.direction = None
+        self.direction = "up"
 
         self.index = 0
 
@@ -203,18 +203,28 @@ class MainWidget2(BaseWidget) :
         self.audio.set_generator(self.sched)
         self.sched.set_generator(self.synth)
 
+        # create the metronome:
+        self.metro = Metronome(self.sched, self.synth)
+
+        # create the arpeggiator:
+        self.arpeg = Arpeggiator(self.sched, self.synth, channel = 1, program = (0,0), loop=True)
+
         # and text to display our status
         self.label = topleft_label()
         self.add_widget(self.label)
 
+        # set pitches and lengths
+        self.arpeg.set_pitches((55, 59, 62, 65, 67, 71))
+
     def on_touch_down(self, touch):
-        pass
+        p = touch.pos
+        self.arpeg.start()
 
     def on_touch_up(self, touch):
-        pass
+        self.arpeg.stop()
 
     def on_touch_move(self, touch):
-        pass
+        p = touch.pos
 
     def on_update(self) :
         self.audio.on_update()
