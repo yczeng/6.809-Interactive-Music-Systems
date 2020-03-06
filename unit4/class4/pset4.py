@@ -351,7 +351,7 @@ class MainWidget3(BaseWidget) :
         self.color_list = dict( zip( interval_list, mapped_colors))
 
         self.touch_pos = (0,0)
-        self.bubble = None
+        self.ghost = None
         self.objects = []
 
         #adds background of haunted mansion
@@ -389,17 +389,17 @@ class MainWidget3(BaseWidget) :
         r = 50
         c = (1,1,1)
 
-        self.bubble = Ghost(self.touch_pos, 20, (1,1,1))
+        self.ghost = Ghost(self.touch_pos, 50, get_random_color(alpha=1.0))
     
-        self.canvas.add(self.bubble)
-        self.anim_group.add(self.bubble)
-        self.objects.append(self.bubble)
+        self.canvas.add(self.ghost)
+        self.anim_group.add(self.ghost)
+        self.objects.append(self.ghost)
 
     def on_touch_up(self, touch):
         self.arpeg2.stop()
 
     def on_touch_move(self, touch):
-        self.bubble.update_pos(touch.pos)
+        self.ghost.update_pos(touch.pos)
         p = touch.pos
 
         # update pitches
@@ -464,7 +464,6 @@ class Ghost(InstructionGroup):
         self.time += dt
         # continue flag
         return self.radius_anim.is_active(self.time)
-
 
 if __name__ == "__main__":
     # pass in which MainWidget to run as a command-line arg
