@@ -15,7 +15,7 @@ import numpy as np
 
 # part 1: create Arpeggiator
 class Arpeggiator(object):
-    def __init__(self, sched, synth, channel=0, program=(0, 40), callback=None, loop=False, ascend=False):
+    def __init__(self, sched, synth, channel=0, program=(0, 40), callback=None, loop=False, ascend=False, volume=70):
         super(Arpeggiator, self).__init__()
 
         self.playing = False
@@ -37,6 +37,8 @@ class Arpeggiator(object):
         self.direction = "up"
 
         self.index = 0
+
+        self.volume = volume
 
         # this is for ascending after ever 8 loops of the chord
         self.ascend = ascend
@@ -127,10 +129,10 @@ class Arpeggiator(object):
 
             # make the first beat stronger
             if self.ascend and self.index == 0:
-                volume = 100
+                volume = self.volume + 30
             else:
-                volume = 70
-            self.synth.noteon(self.channel, pitch, volume)
+                volume = self.volume
+            self.synth.noteon(self.channel, pitch, self.volume)
 
             # post the note off (full duration, legato):
             off_tick = tick + self.length
@@ -292,7 +294,7 @@ class MainWidget3(BaseWidget) :
         self.metro = Metronome(self.sched, self.synth)
 
         # create the arpeggiator:
-        self.arpeg = Arpeggiator(self.sched, self.synth, channel = 1, program = (0,0), loop=True, ascend=True)
+        self.arpeg = Arpeggiator(self.sched, self.synth, channel = 1, program = (0,0), loop=True, ascend=True, volume=60)
 
         # set pitches and lengths
         # this is an evil diminished chord
@@ -311,6 +313,15 @@ class MainWidget3(BaseWidget) :
         # the diminished chords never die
         self.arpeg.set_rhythm(self.length, self.duration)
         self.arpeg.start()
+
+        # create the arpeggiator:
+        self.arpeg2 = Arpeggiator(self.sched, self.synth, channel = 1, program = (0,0), loop=True, volume=80)
+
+        # set pitches and lengths
+
+        # this is an evil diminished chord
+        self.pitches2 = (24, 24, 24, 24)
+        self.arpeg2.set_pitches(self.pitches2)
 
     def on_key_down(self, keycode, modifiers):
         # change pitches with up/down keys
@@ -337,17 +348,27 @@ class MainWidget3(BaseWidget) :
         pass
 
     def on_touch_down(self, touch):
-        pass
+        p = touch.pos
+        self.arpeg2.start()
 
     def on_touch_up(self, touch):
-        pass
+        self.arpeg2.stop()
 
     def on_touch_move(self, touch):
-        pass
+        p = touch.pos
+
+        # update pitches
+        scaling = (touch.pos[0] - Window.width/2) / 50
+        new_pitches2 = tuple([int(scaling+i) for i in self.pitches2])
+        self.arpeg2.set_pitches(new_pitches2)
+
+        # update speed - range
+        self.arpeg2.set_rhythm(p[1], 0.7)
 
     def on_update(self) :
         self.audio.on_update()
         self.label.text = self.sched.now_str() + '\n'
+
 
 
 if __name__ == "__main__":
