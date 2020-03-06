@@ -302,6 +302,12 @@ class MainWidget3(BaseWidget) :
         self.length = 180
         self.duration = 0.7
 
+
+        self.blackkeys = (41, 43, 46, 48, 50)
+        self.whitekeys = (40, 42, 44, 45, 47, 49, 51)
+        self.ominous_melody = (40, 42, 43, 48, 47, 47) + (42, 43, 45, 50, 48, 47) + (48, 47, 45, 43, 45, 47, 40, 40) + (42, 45, 42, 47)
+
+
         # the diminished chords never die
         self.arpeg.set_rhythm(self.length, self.duration)
         self.arpeg.start()
