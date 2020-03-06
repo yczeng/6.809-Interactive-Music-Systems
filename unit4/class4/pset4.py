@@ -354,6 +354,11 @@ class MainWidget3(BaseWidget) :
         self.bubble = None
         self.objects = []
 
+        #adds background of haunted mansion
+        Window.size = (1500, 1050)
+        self.background = Rectangle(pos=(0,0), size=(Window.width, Window.height), source ="pictures/haunted-mansion.jpg")
+        self.canvas.add(self.background)
+
     def on_key_down(self, keycode, modifiers):
         # change pitches with up/down keys
         pitch_change = lookup(keycode[1], ('up', 'down'), (1, -1))
@@ -384,7 +389,7 @@ class MainWidget3(BaseWidget) :
         r = 50
         c = (1,1,1)
 
-        self.bubble = ClickBubble(self.touch_pos, 20, (1,1,1), "sine", 1)
+        self.bubble = Ghost(self.touch_pos, 20, (1,1,1))
     
         self.canvas.add(self.bubble)
         self.anim_group.add(self.bubble)
@@ -423,22 +428,20 @@ gravity = np.array((0, -1800))
 damping = 0.9
 
 
-class ClickBubble(InstructionGroup):
-    def __init__(self, pos, r, color, timbre="sine", decay=1):
-        super(ClickBubble, self).__init__()
+class Ghost(InstructionGroup):
+    def __init__(self, pos, r, color):
+        super(Ghost, self).__init__()
 
         center_x = Window.width/2
         center_y = Window.height/2
 
-        self.radius_anim = KFAnim((0, r), (1, 4*r), (1, 0))
-        self.pos_anim    = KFAnim((0, pos[0], pos[1]), (3, Window.width, Window.height))
+        self.radius_anim = KFAnim((0, r), (1, 4*r), (10, 0))
+        self.pos_anim = KFAnim((0, pos[0], pos[1]), (3, Window.width, Window.height))
 
         self.color = Color(*color)
         self.add(self.color)
-        self.timbre = timbre
-        self.decay = decay
 
-        self.square = Rectangle(pos=pos, size=(2*r, 2*r))
+        self.square = Rectangle(pos=pos, size=(1*r, 2*r), source="pictures/ghost.png")
         self.add(self.square)
 
         self.time = 0
