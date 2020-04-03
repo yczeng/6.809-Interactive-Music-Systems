@@ -54,32 +54,41 @@ class Harp(InstructionGroup):
 
         self.active_color = (0,255,0)
         self.inactive_color = (255,0,0)
+
         self.add(Color(self.inactive_color))
 
         self.string = Line(points=(Window.width/2, Window.height, Window.width/2, 0), width=3)
         self.add(self.string)
 
+        self.win_size = Window.size
+
 
     # will get called when the window size changes.
     def on_layout(self, win_size):
+        self.win_size = win_size
         self.hand.set_boundary(win_size, self.kCursorPos)
+
+        self.remove(self.string)
+
+        self.string = Line(points=(win_size[0]/2, win_size[1], win_size[0]/2, 0), width=3)
+        self.add(self.string)
 
     # set the hand position as a normalized 3D vector ranging from [0,0,0] to [1,1,1]
     def set_hand_pos(self, pos):
 
         print(pos)
 
-        # z = pos[2]
-        # print(z)
-        # self.hand.set_pos(pos)
+        z = pos[2]
+        print(z)
+        self.hand.set_pos(pos)
 
-        # active_color = (0,255,0)
-        # inactive_color = (255,0,0)
+        active_color = (0,255,0)
+        inactive_color = (255,0,0)
 
-        # if z >= 0.2:
-        #     self.hand.set_color(active_color)
-        # else:
-        #     self.hand.set_color(inactive_color)
+        if z >= 0.2:
+            self.hand.set_color(active_color)
+        else:
+            self.hand.set_color(inactive_color)
 
     # callback to be called from a PluckGesture when a pluck happens
     def on_pluck(self, idx):
