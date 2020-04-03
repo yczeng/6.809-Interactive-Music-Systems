@@ -20,7 +20,7 @@ import numpy as np
 # This class displays a single string on screen. It knows how to draw the
 # string and how to bend it, and animate it
 class String(InstructionGroup):
-    def __init__(self, idx, x, y_top, y_bottom):
+    def __init__(self, pitch, x, y_top, y_bottom):
         super(String, self).__init__()
 
         self.x_pos = x
@@ -82,11 +82,25 @@ class Harp(InstructionGroup):
         self.y_bottom = 0
         self.mid = (self.y_top + self.y_bottom)/2
 
+
+        # this is from part a
         self.string = Line(points=[self.x_pos, self.y_top, self.x_pos, self.mid, self.x_pos, self.y_bottom])
         self.add(self.string)
 
         # make string white
         self.add(Color((255,0,0)))
+
+        # put 5 strings
+        num_strings = 5
+
+        # figure out notes
+        self.notes = [60 + i for i in range(num_strings)]
+
+        x_positions = [Window.width/6 * i-50 for i in range(num_strings)]
+        self.strings = [String(self.notes[i], x_positions[i], self.y_top, self.y_bottom) for i in range(num_strings)]
+
+        for string in self.strings:
+            self.add(string)
 
         self.win_size = Window.size
 
