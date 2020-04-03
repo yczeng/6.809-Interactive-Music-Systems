@@ -50,6 +50,7 @@ class Harp(InstructionGroup):
         self.kCursorPos = kMargin, kMargin
 
         self.hand = Cursor3D(kCursorSize, self.kCursorPos, (.6, .6, .6))
+        # self.canvas.add(self.hand)
 
         self.active_color = (0,255,0)
         self.inactive_color = (255,0,0)
@@ -65,17 +66,20 @@ class Harp(InstructionGroup):
 
     # set the hand position as a normalized 3D vector ranging from [0,0,0] to [1,1,1]
     def set_hand_pos(self, pos):
-        z = pos[2]
-        print(z)
-        self.hand.set_pos(pos)
 
-        active_color = (0,255,0)
-        inactive_color = (255,0,0)
+        print(pos)
 
-        if z >= 0.2:
-            self.hand.set_color(active_color)
-        else:
-            self.hand.set_color(inactive_color)
+        # z = pos[2]
+        # print(z)
+        # self.hand.set_pos(pos)
+
+        # active_color = (0,255,0)
+        # inactive_color = (255,0,0)
+
+        # if z >= 0.2:
+        #     self.hand.set_color(active_color)
+        # else:
+        #     self.hand.set_color(inactive_color)
 
     # callback to be called from a PluckGesture when a pluck happens
     def on_pluck(self, idx):
@@ -94,6 +98,7 @@ class MainWidget(BaseWidget) :
         self.add_widget(self.label)
 
         self.harp = Harp()
+        self.canvas.add(self.harp.hand)
         self.canvas.add(self.harp)
 
     # will get called when the window size changes. Pass this information down
@@ -105,9 +110,16 @@ class MainWidget(BaseWidget) :
 
     def on_update(self) :
         leap_frame = getLeapFrame()
+        hand = leap_frame.hands[0]
+        norm_pt = scale_point(hand.palm_pos, kLeapRange)
+
+        self.harp.hand.set_pos(norm_pt)
 
         self.label.text = str(getLeapInfo()) + '\n'
 
+# for use with scale_point
+# x, y, and z ranges to define a 3D bounding box
+kLeapRange   = ( (-250, 250), (100, 500), (-200, 250) )
 
 if __name__ == "__main__":
     # pass in which MainWidget to run as a command-line arg
