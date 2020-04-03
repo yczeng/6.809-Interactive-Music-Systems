@@ -20,8 +20,10 @@ import numpy as np
 # This class displays a single string on screen. It knows how to draw the
 # string and how to bend it, and animate it
 class String(InstructionGroup):
-    def __init__(self, pitch, x, y_top, y_bottom):
+    def __init__(self, string_id, pitch, x, y_top, y_bottom):
         super(String, self).__init__()
+
+        self.string_id = string_id
 
         self.x_pos = x
         self.y_top = y_top
@@ -34,10 +36,16 @@ class String(InstructionGroup):
         self.plucked = False
         self.grabbed = False
 
+    def pluck(self, old_x):
+        self.time = 0
+        self.on_update(0)
+
     # if the string is going to animate (say, when it is plucked), on_update is
     # necessary
     def on_update(self, dt):
-        pass
+        self.time += dt
+        self.line.points = [self.x_pos, self.y_top, self.x_pos + dx, self.mid, self.x_pos, self.y_bottom]
+        return True
 
 
 # This class monitors the location of the hand and determines if a pluck of
@@ -51,16 +59,18 @@ class PluckGesture(object):
         self.idx = idx
         self.callback = callback
 
-        self.pluck_thres = 30
-        self.grab_thres = 10
+        self.pluck_thres = .30
+        self.grab_thres = .10
 
     def set_hand_pos(self, pos):
 
-        diff = abs(pos[0] - self.string.x_pos)
+        diff = abs(pos[0] - self.string.x_pos/Window.width)
+        print(diff)
 
         if diff < self.pluck_thres:
             if diff < self.grab_thres and not self.string.grabbed:
                 self.string.grabbed = True
+                print("WENT OVER")
         elif self.string.grabbed:
             self.callback(self.idx)
             self.string.grabbed = False
@@ -68,8 +78,10 @@ class PluckGesture(object):
 # The Harp class combines the above classes into a fully working harp. It
 # instantiates the strings and pluck gestures as well as a hand cursor display
 class Harp(InstructionGroup):
-    def __init__(self):
+    def __init__(self, synth):
         super(Harp, self).__init__()
+
+        self.synth = synth
 
         kMargin = Window.width * 0.05
         kCursorSize = Window.width - 2 * kMargin, Window.height - 2 * kMargin
@@ -94,14 +106,11 @@ class Harp(InstructionGroup):
         num_strings = 6
         self.num_strings = num_strings
 
-        # figure out notes
+        # figure out notes / same thing as tuning
         self.notes = [60 + i for i in range(num_strings)]
 
-        x_positions = [Window.width/num_strings for i in range(num_strings)]
-        self.strings = [String(self.notes[i], x_positions[i], self.y_top, self.y_bottom) for i in range(num_strings)]
-
-        for string in self.strings:
-            self.add(string)
+        self.strings = []
+        self.pluck_gestures = []
 
         self.win_size = Window.size
 
@@ -126,23 +135,47 @@ class Harp(InstructionGroup):
 
         x_positions = [Window.width/num_strings * i for i in range(num_strings)]
 
-        self.strings = [String(self.notes[i], x_positions[i], self.y_top, self.y_bottom) for i in range(num_strings)]
+        print(x_positions)
 
+        self.strings = [String(i, self.notes[i], x_positions[i], self.y_top, self.y_bottom) for i in range(num_strings)]
+
+        self.objects = AnimGroup()
         for string in self.strings:
-            self.add(string)
+            self.objects.add(string)
+        self.add(self.objects)
+
+        self.pluck_gestures = [PluckGesture(string, string.string_id, self.on_pluck) for string in self.strings]
 
     # set the hand position as a normalized 3D vector ranging from [0,0,0] to [1,1,1]
     def set_hand_pos(self, pos):
-        pass
+        norm_pt = pos
+        self.hand.set_pos(norm_pt)
+
+        # inactive (not plucking is red)
+        active = (0,150,0)
+        # active is green
+        inactive_color = (150,0,0)
+
+        # not active
+        if norm_pt[2] >= 0.5:
+            self.hand.set_color(inactive_color)
+        # is active
+        else:
+            for pluck_gesture in self.pluck_gestures:
+                pluck_gesture.set_hand_pos(norm_pt)
+            self.hand.set_color(active)
 
     # callback to be called from a PluckGesture when a pluck happens
     def on_pluck(self, idx):
         #plays a note
-        print('pluck:', idx)
+        pitch = self.notes[idx]
+
+        self.synth.noteon(0, pitch, 100)
+        # print('pluck:', idx)
 
     # this might be needed if Harp's internal objects need on_update()
     def on_update(self, pos):
-        print(pos)
+        self.objects.on_update()
 
 class MainWidget(BaseWidget) :
     def __init__(self):
@@ -151,7 +184,11 @@ class MainWidget(BaseWidget) :
         self.label = topleft_label()
         self.add_widget(self.label)
 
-        self.harp = Harp()
+        self.audio = Audio(2)
+        self.synth = Synth("../data/FluidR3_GM.sf2")
+        self.audio.set_generator(self.synth)
+
+        self.harp = Harp(self.synth)
         self.canvas.add(self.harp.hand)
         self.canvas.add(self.harp)
 
@@ -171,15 +208,9 @@ class MainWidget(BaseWidget) :
 
         self.label.text = str(getLeapInfo()) + '\n'
 
-        # inactive (not plucking is red)
-        inactive_color = (0,150,0)
-        # active is green
-        active_color = (150,0,0)
+        self.harp.set_hand_pos(norm_pt)
 
-        if norm_pt[2] >= 0.5:
-            self.harp.hand.set_color(active_color)
-        else:
-            self.harp.hand.set_color(inactive_color)
+        self.audio.on_update()
 
 
 # for use with scale_point
