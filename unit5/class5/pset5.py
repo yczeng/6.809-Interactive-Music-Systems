@@ -83,20 +83,21 @@ class Harp(InstructionGroup):
         self.mid = (self.y_top + self.y_bottom)/2
 
 
-        # this is from part a
-        self.string = Line(points=[self.x_pos, self.y_top, self.x_pos, self.mid, self.x_pos, self.y_bottom])
-        self.add(self.string)
+        # # this is from part a
+        # self.string = Line(points=[self.x_pos, self.y_top, self.x_pos, self.mid, self.x_pos, self.y_bottom])
+        # self.add(self.string)
 
-        # make string white
+        # # make string white
         self.add(Color((255,0,0)))
 
         # put 5 strings
-        num_strings = 5
+        num_strings = 6
+        self.num_strings = num_strings
 
         # figure out notes
         self.notes = [60 + i for i in range(num_strings)]
 
-        x_positions = [Window.width/6 * i-50 for i in range(num_strings)]
+        x_positions = [Window.width/num_strings for i in range(num_strings)]
         self.strings = [String(self.notes[i], x_positions[i], self.y_top, self.y_bottom) for i in range(num_strings)]
 
         for string in self.strings:
@@ -112,15 +113,23 @@ class Harp(InstructionGroup):
         self.win_size = win_size
         self.hand.set_boundary(win_size, self.kCursorPos)
 
-        self.remove(self.string)
+        for string in self.strings:
+            self.remove(string)
 
         self.x_pos = win_size[0]/2
         self.y_top = win_size[1]
         self.y_bottom = 0
         self.mid = (self.y_top + self.y_bottom)/2
 
-        self.string = Line(points=[self.x_pos, self.y_top, self.x_pos, self.mid, self.x_pos, self.y_bottom])
-        self.add(self.string)
+        # put 5 strings
+        num_strings = self.num_strings
+
+        x_positions = [Window.width/num_strings * i for i in range(num_strings)]
+
+        self.strings = [String(self.notes[i], x_positions[i], self.y_top, self.y_bottom) for i in range(num_strings)]
+
+        for string in self.strings:
+            self.add(string)
 
     # set the hand position as a normalized 3D vector ranging from [0,0,0] to [1,1,1]
     def set_hand_pos(self, pos):
