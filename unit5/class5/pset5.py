@@ -36,7 +36,13 @@ class String(InstructionGroup):
         self.plucked = False
         self.grabbed = False
 
+        self.total_time = 0.2
+        self.time = 0
+
+        self.moved_string = None
+
     def pluck(self, old_x):
+        self.moved_string = KFAnim((0, old_x), (self.total_time, 0)) 
         self.time = 0
         self.on_update(0)
 
@@ -44,7 +50,9 @@ class String(InstructionGroup):
     # necessary
     def on_update(self, dt):
         self.time += dt
-        self.line.points = [self.x_pos, self.y_top, self.x_pos + dx, self.mid, self.x_pos, self.y_bottom]
+        if self.moved_string:
+            dx = self.moved_string.eval(self.time)
+            self.line.points = [self.x_pos, self.y_top, self.x_pos + dx, self.mid, self.x_pos, self.y_bottom]
         return True
 
 
@@ -70,7 +78,6 @@ class PluckGesture(object):
         if diff < self.pluck_thres:
             if diff < self.grab_thres and not self.string.grabbed:
                 self.string.grabbed = True
-                print("WENT OVER")
         elif self.string.grabbed:
             self.callback(self.idx)
             self.string.grabbed = False
@@ -109,6 +116,7 @@ class Harp(InstructionGroup):
         # figure out notes / same thing as tuning
         self.notes = [60 + i for i in range(num_strings)]
 
+        # this just happens on on_layout later
         self.strings = []
         self.pluck_gestures = []
 
@@ -123,7 +131,7 @@ class Harp(InstructionGroup):
         self.hand.set_boundary(win_size, self.kCursorPos)
 
         for string in self.strings:
-            self.remove(string)
+            self.objects.remove(string)
 
         self.x_pos = win_size[0]/2
         self.y_top = win_size[1]
@@ -207,9 +215,7 @@ class MainWidget(BaseWidget) :
         self.harp.hand.set_pos(norm_pt)
 
         self.label.text = str(getLeapInfo()) + '\n'
-
         self.harp.set_hand_pos(norm_pt)
-
         self.audio.on_update()
 
 
