@@ -15,6 +15,8 @@ from kivy.graphics.instructions import InstructionGroup
 from kivy.graphics import Color, Ellipse, Line, Rectangle
 from kivy.core.window import Window
 
+import numpy as np
+
 
 
 class MainWidget(BaseWidget) :
@@ -156,18 +158,21 @@ class GemDisplay(InstructionGroup):
 
         self.lane_pos = lane_all[int(lane)-1]
 
-        pos = (self.lane_pos, Window.height)
+        self.pos = (self.lane_pos, Window.height)
 
-        self.gem = Rectangle(pos = pos, size=(110,130), source ="../data/gem_hit.png")
+        self.gem = Rectangle(pos = self.pos, size=(110,130), source ="../data/gem_hit.png")
         self.add(self.gem)
 
     # change to display this gem being hit
     def on_hit(self):
-        self.gem.source = "../data/gem_LARGE.png"
+        file = np.random.choice(['gem_LARGE', 'gem_LARGE1', 'gem_LARGE2', 'gem_LARGE3'])
+        self.gem.source = "../data/" + file + ".png"
+        self.gem.size = (200, 1.18 * 200)
+        self.gem.pos = (self.pos[0] - 50, Window.height)
 
     # change to display a passed or missed gem
     def on_pass(self):
-        self.gem.source = "../data/gem_opaque.png"
+        self.gem.source = "../data/gem_sad.png"
 
     # animate gem (position and animation) based on current time
     def on_update(self, now_time):
