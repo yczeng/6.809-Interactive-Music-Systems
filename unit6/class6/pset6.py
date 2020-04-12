@@ -38,6 +38,7 @@ class MainWidget(BaseWidget) :
         self.score = Label(text = 'Bowie Bond: $' + str(self.display.score), valign='top', font_size='100sp',
               pos=(Window.width - 200, Window.height * 0.5 - 70),
               text_size=(Window.width, Window.height))
+
         self.add_widget(self.score)
 
     def on_key_down(self, keycode, modifiers):
@@ -182,6 +183,7 @@ class GemDisplay(InstructionGroup):
     # change to display a passed or missed gem
     def on_pass(self):
         self.gem.source = "../data/gem_sad.png"
+        self.gem.size = (200, 1.18 * 200)
 
     # animate gem (position and animation) based on current time
     def on_update(self, now_time):
@@ -250,17 +252,17 @@ class ButtonDisplay(InstructionGroup):
         self.lane_pos = lane_all[int(lane)-1]
         pos = (self.lane_pos, Window.height * 0.16)
 
-        self.button = Rectangle(pos = pos, size=(100,100), source="../data/red_star.png")
+        self.button = Rectangle(pos = pos, size=(100,50), source="../data/money.jpeg")
         self.add(self.button)
 
     # displays when button is pressed down
     def on_down(self, hit=False):
         if hit:
-            self.button.size = (150,150)
+            self.button.size = (200,50*2)
 
     # back to normal state
     def on_up(self):
-        self.button.size = (100,100)
+        self.button.size = (100,50)
 
     # modify object positions based on new window size
     def on_layout(self, win_size):
@@ -303,11 +305,8 @@ class GameDisplay(InstructionGroup):
 
         self.gem_indices = []
 
-        # print("selfgems", self.gems)
-        # print("selfgems", self.gems)
-        # print(self.barlines)
-
         self.score = 0
+
 
     # called by Player when succeeded in hitting this gem.
     def gem_hit(self, gem_idx):
@@ -348,7 +347,6 @@ class GameDisplay(InstructionGroup):
             else:
                 print("YOU PRESSED THE WRONG BUTTON YOU DINGUS")
 
-
         # add logic to see if gem hit
 
     # called by Player on button up
@@ -365,6 +363,7 @@ class GameDisplay(InstructionGroup):
 
     # call every frame to handle animation needs
     def on_update(self, now_time):
+        # self.fart = False
         for b in self.beats:
             visible = b.on_update(now_time)
 
