@@ -65,6 +65,7 @@ class MainWidget(BaseWidget) :
 
         self.info.text = 'p: pause/unpause song\n'
         self.info.text += 'time: {:.2f}\n'.format(now)
+        self.info.text += 'score: ' + str(self.player.score)
 
 
 # Handles everything about Audio.
@@ -155,14 +156,14 @@ class GemDisplay(InstructionGroup):
 
         self.lane_pos = lane_all[int(lane)-1]
 
-        pos = (self.lane_pos, Window.height + 10)
+        pos = (self.lane_pos, Window.height)
 
         self.gem = Rectangle(pos = pos, size=(110,130), source ="../data/gem_hit.png")
         self.add(self.gem)
 
     # change to display this gem being hit
     def on_hit(self):
-        self.gem.source = "../data/gem_large.png"
+        self.gem.source = "../data/gem_LARGE.png"
 
     # change to display a passed or missed gem
     def on_pass(self):
@@ -286,13 +287,21 @@ class GameDisplay(InstructionGroup):
         for l in self.lanes:
             self.add(l)
 
+        self.gem_indices = []
+
         # print("selfgems", self.gems)
         # print("selfgems", self.gems)
         # print(self.barlines)
 
     # called by Player when succeeded in hitting this gem.
     def gem_hit(self, gem_idx):
+        print("BURp")
         self.gems[gem_idx].on_hit()
+
+    def gem_location(self, gem_idx):
+        test_gem = self.gems[gem_idx]
+        # print(test_gem.gem.pos)
+        return test_gem.gem.pos[1]
 
     # called by Player on pass or miss.
     def gem_pass(self, gem_idx):
@@ -301,6 +310,20 @@ class GameDisplay(InstructionGroup):
     # called by Player on button down
     def on_button_down(self, lane, hit=False):
         self.lanes[lane].on_down(hit)
+
+        if len(self.gem_indices):
+            gem_index = self.gem_indices[0]
+
+            print(self.gem_location(gem_index))
+            top_satisfied = self.gem_location(gem_index) <= (.2*Window.height + 50)
+            bottom_satisfied = self.gem_location(gem_index) >= (.2*Window.height - 50)
+
+            if top_satisfied and bottom_satisfied:
+                self.gem_hit(gem_index)
+                self.gem_indices[1::]
+
+
+        # add logic to see if gem hit
 
     # called by Player on button up
     def on_button_up(self, lane):
@@ -327,15 +350,23 @@ class GameDisplay(InstructionGroup):
                     self.remove(b)
 
 
-        for g in self.gems:
+        for idx, g in enumerate(self.gems):
             visible = g.on_update(now_time)
 
             if visible:
                 if g not in self.children:
                     self.add(g)
+                    self.gem_indices.append(idx)
+
+                # can't press if under bar anymore
+                if g.gem.pos[1] < .2*Window.height-60:
+                    if idx in self.gem_indices:
+                        self.gem_indices.remove(idx)
             else:
                 if g in self.children:
                     self.remove(g)
+                    if idx in self.gem_indices:
+                        self.gem_indices.remove(idx)
 
 
 # Handles game logic and keeps track of score.
@@ -352,11 +383,9 @@ class Player(object):
 
     # called by MainWidget
     def on_button_down(self, lane):
-        self.display.on_button_down(lane, self.gem_hit(lane))
+        self.display.on_button_down(lane, True)
 
-
-    def gem_hit(self, lane):
-        return True
+        # if gem_hit(lane):
 
     # called by MainWidget
     def on_button_up(self, lane):
