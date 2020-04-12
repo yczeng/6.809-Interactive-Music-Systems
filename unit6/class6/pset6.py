@@ -150,14 +150,14 @@ class GemDisplay(InstructionGroup):
         self.time = time
         # self.color = color
 
-        lane_width = Window.width / 4
+        lane_width = Window.width / 5
         lane_all = [lane_width, 2*lane_width, 3*lane_width]
 
         self.lane_pos = lane_all[int(lane)-1]
 
         pos = (self.lane_pos, Window.height + 10)
 
-        self.gem = Rectangle(pos = pos, size=(100,100), source ="../data/gem_hit.png")
+        self.gem = Rectangle(pos = pos, size=(80,100), source ="../data/gem_hit.png")
         self.add(self.gem)
 
     # change to display this gem being hit
@@ -181,7 +181,7 @@ class GemDisplay(InstructionGroup):
         scaled_beat_marker_len = beat_marker_len * Window.width
         start = (Window.width - scaled_beat_marker_len) / 2
 
-        self.gem.pos = (self.lane_pos, y_pos)
+        self.gem.pos = (self.lane_pos + 10, y_pos)
 
         if y_pos < 0 or y_pos > Window.height:
             return False
@@ -225,11 +225,18 @@ class BarlineDisplay(InstructionGroup):
 
 # Displays one button on the nowbar
 class ButtonDisplay(InstructionGroup):
-    def __init__(self, lane, color):
+    def __init__(self, lane, color=None):
         super(ButtonDisplay, self).__init__()
-        self.color = Color(hsv=color)
+        # self.color = Color(hsv=color)
         # self.add(self.color)
-        self.source = "../data/red_star.png"
+
+        lane_width = Window.width / 5
+        lane_all = [lane_width, 2*lane_width, 3*lane_width]
+        self.lane_pos = lane_all[int(lane)-1]
+        pos = (self.lane_pos, Window.height * 0.13)
+
+        self.button = Rectangle(pos = pos, size=(100,100), source="../data/red_star.png")
+        self.add(self.button)
 
     # displays when button is pressed down
     def on_down(self):
@@ -259,7 +266,7 @@ class GameDisplay(InstructionGroup):
         for b in self.beats:
             self.add(b)
 
-        self.line = Line(points=(.1*Window.width, .2*Window.height, 0.9*Window.width, .2*Window.height), width=3)
+        self.line = Line(points=(.1*Window.width, .2*Window.height, 0.9*Window.width, .2*Window.height), width=1)
         self.color = Color(1,1,1)
         self.add(self.color)
         self.add(self.line)
@@ -268,6 +275,10 @@ class GameDisplay(InstructionGroup):
         self.gems = [GemDisplay(g[2], g[0]) for g in self.song.get_gems()]
         for g in self.gems:
             self.add(g)
+
+        self.lanes = [ButtonDisplay(l) for l in range(3)]
+        for l in self.lanes:
+            self.add(l)
 
         # print("selfgems", self.gems)
         # print("selfgems", self.gems)
