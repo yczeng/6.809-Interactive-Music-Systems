@@ -151,12 +151,13 @@ class GemDisplay(InstructionGroup):
         # self.color = color
 
         lane_width = Window.width / 4
-        lane_pos = [lane_width, 2*lane_width, 3*lane_width]
+        lane_all = [lane_width, 2*lane_width, 3*lane_width]
 
-        print(lane)
-        pos = (lane_pos[int(lane)-1], Window.height - 10)
+        self.lane_pos = lane_all[int(lane)-1]
 
-        self.gem = Rectangle(pos = pos, size=(100,100), source ="../data/gem.png")
+        pos = (self.lane_pos, Window.height + 10)
+
+        self.gem = Rectangle(pos = pos, size=(100,100), source ="../data/gem_hit.png")
         self.add(self.gem)
 
     # change to display this gem being hit
@@ -180,8 +181,7 @@ class GemDisplay(InstructionGroup):
         scaled_beat_marker_len = beat_marker_len * Window.width
         start = (Window.width - scaled_beat_marker_len) / 2
 
-        self.gem.points = [start, y_pos, Window.width - start, y_pos]
-
+        self.gem.pos = (self.lane_pos, y_pos)
 
         if y_pos < 0 or y_pos > Window.height:
             return False
@@ -199,10 +199,10 @@ class BarlineDisplay(InstructionGroup):
         # self.add(self.line)
 
 
-        self.color = Color(hsv=(255,255,255))
-        self.line = Line(width = 3) # actual points of line to be set in on_update()
+        # self.color = Color(hsv=(255,255,255))
+        self.line = Line(width = 0.5) # actual points of line to be set in on_update()
 
-        self.add(self.color)
+        # self.add(self.color)
         self.add(self.line)
 
     # animate barline (position) based on current time
@@ -215,12 +215,7 @@ class BarlineDisplay(InstructionGroup):
         y_pos = time_to_ypos(float(self.time) - float(now_time))
         # x_pos = beat_marker_len * self.time - now_time
 
-        beat_marker_len = 0.2
-        scaled_beat_marker_len = beat_marker_len * Window.width
-        start = (Window.width - scaled_beat_marker_len) / 2
-
-        self.line.points = [start, y_pos, Window.width - start, y_pos]
-
+        self.line.points = [0, y_pos, Window.width, y_pos]
 
         if y_pos < 0 or y_pos > Window.height:
             return False
@@ -233,7 +228,7 @@ class ButtonDisplay(InstructionGroup):
     def __init__(self, lane, color):
         super(ButtonDisplay, self).__init__()
         self.color = Color(hsv=color)
-        self.add(self.color)
+        # self.add(self.color)
         self.source = "../data/red_star.png"
 
     # displays when button is pressed down
@@ -263,6 +258,11 @@ class GameDisplay(InstructionGroup):
         self.beats = [BarlineDisplay(b) for b in self.song.get_barlines()]
         for b in self.beats:
             self.add(b)
+
+        self.line = Line(points=(.1*Window.width, .2*Window.height, 0.9*Window.width, .2*Window.height), width=3)
+        self.color = Color(1,1,1)
+        self.add(self.color)
+        self.add(self.line)
 
         # self.gems = self.song.get_gems()
         self.gems = [GemDisplay(g[2], g[0]) for g in self.song.get_gems()]
@@ -308,6 +308,17 @@ class GameDisplay(InstructionGroup):
             else:
                 if b in self.children:
                     self.remove(b)
+
+
+        for g in self.gems:
+            visible = g.on_update(now_time)
+
+            if visible:
+                if g not in self.children:
+                    self.add(g)
+            else:
+                if g in self.children:
+                    self.remove(g)
 
 
 # Handles game logic and keeps track of score.
