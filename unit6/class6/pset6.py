@@ -124,38 +124,40 @@ class SongData(object):
     def get_gems(self):
         with open("../data/ziggy_gem_annotation.txt") as f:
             lines = f.readlines()
+            print(lines)
             for line in lines:
                 new_gem = line.replace("\n", "").replace(" ", "").split("\t")
+                print(new_gem)
                 self.gems.append(new_gem)
 
         return self.gems
 
     def get_barlines(self):
-        for bar in self.barlines:
-            with open("../data/ziggy_barlines_annotation.txt") as f:
-                lines = f.readlines()
-                for line in lines:
-                    barline = line.replace("\n", "").replace(" ", "").split("\t")
-                    self.barlines.append(barline[0])
+        with open("../data/ziggy_barlines_annotation.txt") as f:
+            lines = f.readlines()
+            for line in lines:
+                barline = line.replace("\n", "").replace(" ", "").split("\t")
+                self.barlines.append(barline[0])
 
         return self.barlines
 
 
 # Display for a single gem at a position with a hue or color
 class GemDisplay(InstructionGroup):
-    def __init__(self, lane, time, color):
+    def __init__(self, lane, time, color=None):
         super(GemDisplay, self).__init__()
         self.lane = lane
         self.time = time
-        self.color = color
+        # self.color = color
 
         lane_width = Window.width / 4
         lane_pos = [lane_width, 2*lane_width, 3*lane_width]
 
-        pos = (lane_pos[lane], Window.height - 10)
+        print(lane)
+        pos = (lane_pos[int(lane)-1], Window.height - 10)
 
         self.gem = Rectangle(pos = pos, size=(100,100), source ="../data/gem.png")
-        self.add(self.shape)
+        self.add(self.gem)
 
     # change to display this gem being hit
     def on_hit(self):
@@ -167,7 +169,24 @@ class GemDisplay(InstructionGroup):
 
     # animate gem (position and animation) based on current time
     def on_update(self, now_time):
-        pass
+        def time_to_ypos(time):
+            time_span = 2.0
+            return Window.height * time / time_span + 0.2*Window.height
+
+        y_pos = time_to_ypos(float(self.time) - float(now_time))
+        # x_pos = beat_marker_len * self.time - now_time
+
+        beat_marker_len = 0.2
+        scaled_beat_marker_len = beat_marker_len * Window.width
+        start = (Window.width - scaled_beat_marker_len) / 2
+
+        self.gem.points = [start, y_pos, Window.width - start, y_pos]
+
+
+        if y_pos < 0 or y_pos > Window.height:
+            return False
+        else:
+            return True
 
 
 # Displays a single barline on screen
@@ -176,12 +195,37 @@ class BarlineDisplay(InstructionGroup):
         super(BarlineDisplay, self).__init__()
 
         self.time = time
-        self.line = Line(points=(.1*Window.width, .2*Window.height, 0.9*Window.width, .2*Window.height), width=3)
+        # self.line = Line(points=(.1*Window.width, .2*Window.height, 0.9*Window.width, .2*Window.height), width=3)
+        # self.add(self.line)
+
+
+        self.color = Color(hsv=(255,255,255))
+        self.line = Line(width = 3) # actual points of line to be set in on_update()
+
+        self.add(self.color)
         self.add(self.line)
 
     # animate barline (position) based on current time
     def on_update(self, now_time):
-        pass
+        
+        def time_to_ypos(time):
+            time_span = 2.0
+            return Window.height * time / time_span + 0.2*Window.height
+
+        y_pos = time_to_ypos(float(self.time) - float(now_time))
+        # x_pos = beat_marker_len * self.time - now_time
+
+        beat_marker_len = 0.2
+        scaled_beat_marker_len = beat_marker_len * Window.width
+        start = (Window.width - scaled_beat_marker_len) / 2
+
+        self.line.points = [start, y_pos, Window.width - start, y_pos]
+
+
+        if y_pos < 0 or y_pos > Window.height:
+            return False
+        else:
+            return True
 
 
 # Displays one button on the nowbar
@@ -210,6 +254,25 @@ class GameDisplay(InstructionGroup):
     def __init__(self, song_data):
         super(GameDisplay, self).__init__()
 
+        self.song = SongData(song_data)
+
+
+        # self.barlines = self.song.get_barlines()
+        # print(self.barlines)
+
+        self.beats = [BarlineDisplay(b) for b in self.song.get_barlines()]
+        for b in self.beats:
+            self.add(b)
+
+        # self.gems = self.song.get_gems()
+        self.gems = [GemDisplay(g[2], g[0]) for g in self.song.get_gems()]
+        for g in self.gems:
+            self.add(g)
+
+        # print("selfgems", self.gems)
+        # print("selfgems", self.gems)
+        # print(self.barlines)
+
     # called by Player when succeeded in hitting this gem.
     def gem_hit(self, gem_idx):
         pass
@@ -236,7 +299,15 @@ class GameDisplay(InstructionGroup):
 
     # call every frame to handle animation needs
     def on_update(self, now_time):
-        pass
+        for b in self.beats:
+            visible = b.on_update(now_time)
+
+            if visible:
+                if b not in self.children:
+                    self.add(b)
+            else:
+                if b in self.children:
+                    self.remove(b)
 
 
 # Handles game logic and keeps track of score.
