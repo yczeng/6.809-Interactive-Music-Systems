@@ -150,19 +150,19 @@ class GemDisplay(InstructionGroup):
         self.time = time
         # self.color = color
 
-        lane_width = Window.width / 5
-        lane_all = [lane_width, 2*lane_width, 3*lane_width]
+        lane_width = Window.width / 7
+        lane_all = [2*lane_width, 3*lane_width, 4*lane_width]
 
         self.lane_pos = lane_all[int(lane)-1]
 
         pos = (self.lane_pos, Window.height + 10)
 
-        self.gem = Rectangle(pos = pos, size=(80,100), source ="../data/gem_hit.png")
+        self.gem = Rectangle(pos = pos, size=(110,130), source ="../data/gem_hit.png")
         self.add(self.gem)
 
     # change to display this gem being hit
     def on_hit(self):
-        self.gem.source = "../data/gem_hit.png"
+        self.gem.source = "../data/gem_large.png"
 
     # change to display a passed or missed gem
     def on_pass(self):
@@ -230,21 +230,22 @@ class ButtonDisplay(InstructionGroup):
         # self.color = Color(hsv=color)
         # self.add(self.color)
 
-        lane_width = Window.width / 5
-        lane_all = [lane_width, 2*lane_width, 3*lane_width]
+        lane_width = Window.width / 7
+        lane_all = [lane_width*2, 3*lane_width, 4*lane_width]
         self.lane_pos = lane_all[int(lane)-1]
-        pos = (self.lane_pos, Window.height * 0.13)
+        pos = (self.lane_pos, Window.height * 0.16)
 
         self.button = Rectangle(pos = pos, size=(100,100), source="../data/red_star.png")
         self.add(self.button)
 
     # displays when button is pressed down
-    def on_down(self):
-        self.shape.size(250,250)
+    def on_down(self, hit=False):
+        if hit:
+            self.button.size = (150,150)
 
     # back to normal state
     def on_up(self):
-        self.shape.size(200,200)
+        self.button.size = (100,100)
 
     # modify object positions based on new window size
     def on_layout(self, win_size):
@@ -257,6 +258,11 @@ class GameDisplay(InstructionGroup):
         super(GameDisplay, self).__init__()
 
         self.song = SongData(song_data)
+
+        #adds background of nicholas cage
+        Window.size = (1500, 1050)
+        self.background = Rectangle(pos=(0,0), size=(Window.width, Window.height), source ="../data/stardust.jpg")
+        self.add(self.background)
 
 
         # self.barlines = self.song.get_barlines()
@@ -286,19 +292,19 @@ class GameDisplay(InstructionGroup):
 
     # called by Player when succeeded in hitting this gem.
     def gem_hit(self, gem_idx):
-        pass
+        self.gems[gem_idx].on_hit()
 
     # called by Player on pass or miss.
     def gem_pass(self, gem_idx):
-        pass
+        self.gems[gem_idx].on_pass()
 
     # called by Player on button down
-    def on_button_down(self, lane):
-        pass
+    def on_button_down(self, lane, hit=False):
+        self.lanes[lane].on_down(hit)
 
     # called by Player on button up
     def on_button_up(self, lane):
-        pass
+        self.lanes[lane].on_up()
 
     # called by Player to update score
     def set_score(self, score):
@@ -341,14 +347,20 @@ class Player(object):
         self.audio_ctrl = audio_ctrl
         self.display = display
 
+        self.score = 0
+
+
     # called by MainWidget
     def on_button_down(self, lane):
-        self.display.on_button_down(lane)
-        # TODO add code to figure out hit or miss
+        self.display.on_button_down(lane, self.gem_hit(lane))
+
+
+    def gem_hit(self, lane):
+        return True
 
     # called by MainWidget
     def on_button_up(self, lane):
-        self.display.on_button_down(lane)
+        self.display.on_button_up(lane)
 
     # needed to check for pass gems (ie, went past the slop window)
     def on_update(self, time) :
