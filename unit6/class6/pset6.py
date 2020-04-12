@@ -10,10 +10,10 @@ from common.mixer import Mixer
 from common.wavegen import WaveGenerator
 from common.wavesrc import WaveBuffer, WaveFile
 from common.gfxutil import topleft_label, resize_topleft_label, CEllipse, CLabelRect, KFAnim
-
 from kivy.graphics.instructions import InstructionGroup
 from kivy.graphics import Color, Ellipse, Line, Rectangle
 from kivy.core.window import Window
+from kivy.uix.label import Label
 
 import numpy as np
 
@@ -35,6 +35,11 @@ class MainWidget(BaseWidget) :
         self.info = topleft_label()
         self.add_widget(self.info)
 
+        self.score = Label(text = 'Bowie Bond: $' + str(self.display.score), valign='top', font_size='100sp',
+              pos=(Window.width - 200, Window.height * 0.5 - 70),
+              text_size=(Window.width, Window.height))
+        self.add_widget(self.score)
+
     def on_key_down(self, keycode, modifiers):
         # play / pause toggle
         if keycode[1] == 'p':
@@ -43,19 +48,20 @@ class MainWidget(BaseWidget) :
         # button down
         button_idx = lookup(keycode[1], '31245', (0,1,2,3,4))
         if button_idx != None:
-            print('down', button_idx)
+            # print('down', button_idx)
             self.player.on_button_down(button_idx)
 
     def on_key_up(self, keycode):
         # button up
         button_idx = lookup(keycode[1], '31245', (0,1,2,3,4))
         if button_idx != None:
-            print('up', button_idx)
+            # print('up', button_idx)
             self.player.on_button_up(button_idx)
 
     # handle changing displayed elements when window size changes
     def on_layout(self, win_size):
         resize_topleft_label(self.info)
+
         self.display.on_layout(win_size)
 
     def on_update(self):
@@ -67,7 +73,7 @@ class MainWidget(BaseWidget) :
 
         self.info.text = 'p: pause/unpause song\n'
         self.info.text += 'time: {:.2f}\n'.format(now)
-        self.info.text += 'score: ' + str(self.player.score)
+        self.score.text = 'Bowie Bond: $' + str(self.display.score)
 
 
 # Handles everything about Audio.
@@ -163,12 +169,15 @@ class GemDisplay(InstructionGroup):
         self.gem = Rectangle(pos = self.pos, size=(110,130), source ="../data/gem_hit.png")
         self.add(self.gem)
 
+        self.hit = False
+
     # change to display this gem being hit
     def on_hit(self):
-        file = np.random.choice(['gem_LARGE', 'gem_LARGE1', 'gem_LARGE2', 'gem_LARGE3'])
+        file = np.random.choice(['gem_LARGE', 'gem_LARGE1', 'gem_LARGE2', 'gem_LARGE3', 'gem_LARGE4', 'gem_LARGE5'])
         self.gem.source = "../data/" + file + ".png"
         self.gem.size = (200, 1.18 * 200)
         self.gem.pos = (self.pos[0] - 50, Window.height)
+        self.hit = True
 
     # change to display a passed or missed gem
     def on_pass(self):
@@ -298,15 +307,16 @@ class GameDisplay(InstructionGroup):
         # print("selfgems", self.gems)
         # print(self.barlines)
 
+        self.score = 0
+
     # called by Player when succeeded in hitting this gem.
     def gem_hit(self, gem_idx):
-        print("BURp")
         self.gems[gem_idx].on_hit()
 
     def gem_location(self, gem_idx):
         test_gem = self.gems[gem_idx]
         # print(test_gem.gem.pos)
-        return test_gem.gem.pos[1]
+        return test_gem.gem.pos
 
     # called by Player on pass or miss.
     def gem_pass(self, gem_idx):
@@ -316,16 +326,27 @@ class GameDisplay(InstructionGroup):
     def on_button_down(self, lane, hit=False):
         self.lanes[lane].on_down(hit)
 
+        # lane is 0 2 1 for 3 2 1
+        # mapping is weird
+
         if len(self.gem_indices):
             gem_index = self.gem_indices[0]
 
-            print(self.gem_location(gem_index))
-            top_satisfied = self.gem_location(gem_index) <= (.2*Window.height + 50)
-            bottom_satisfied = self.gem_location(gem_index) >= (.2*Window.height - 50)
+            top_satisfied = self.gem_location(gem_index)[1] <= (.2*Window.height + 50)
+            bottom_satisfied = self.gem_location(gem_index)[1] >= (.2*Window.height - 50)
 
-            if top_satisfied and bottom_satisfied:
+            check_lane1 = (lane == 1 and (self.gem_location(gem_index)[0] > 438 and self.gem_location(gem_index)[0] < 439))
+            check_lane2 = (lane == 2 and (self.gem_location(gem_index)[0] > 652 and self.gem_location(gem_index)[0] < 653))
+            check_lane3 = (lane == 0 and (self.gem_location(gem_index)[0] > 867 and self.gem_location(gem_index)[0] < 868))
+
+            lane_right = check_lane1 or check_lane2 or check_lane3
+
+            if top_satisfied and bottom_satisfied and lane_right:
                 self.gem_hit(gem_index)
                 self.gem_indices[1::]
+                self.set_score(20)
+            else:
+                print("YOU PRESSED THE WRONG BUTTON YOU DINGUS")
 
 
         # add logic to see if gem hit
@@ -336,7 +357,7 @@ class GameDisplay(InstructionGroup):
 
     # called by Player to update score
     def set_score(self, score):
-        pass
+        self.score += score
         
     # for when the window size changes (if needed)
     def on_layout(self, win_size):
@@ -367,6 +388,8 @@ class GameDisplay(InstructionGroup):
                 if g.gem.pos[1] < .2*Window.height-60:
                     if idx in self.gem_indices:
                         self.gem_indices.remove(idx)
+                    if not g.hit:
+                        g.on_pass()
             else:
                 if g in self.children:
                     self.remove(g)
@@ -382,9 +405,6 @@ class Player(object):
         self.song_data = song_data
         self.audio_ctrl = audio_ctrl
         self.display = display
-
-        self.score = 0
-
 
     # called by MainWidget
     def on_button_down(self, lane):
